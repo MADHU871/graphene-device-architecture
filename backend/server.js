@@ -1,139 +1,19 @@
-require("dotenv").config();
-
-const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
 
-const app = express();
+const DeviceSchema = new mongoose.Schema({
 
-app.use(cors());
+    deviceName: String,
 
-app.use(express.json());
+    architecture: String,
 
-const PORT = process.env.PORT || 5000;
+    status: String,
 
-const MONGO_URI = process.env.MONGO_URI;
+    processor: String,
 
+    ram: String,
 
-
-mongoose.connect(MONGO_URI)
-.then(() => {
-
-    console.log("MongoDB Connected Successfully");
-
-})
-.catch((err) => {
-
-    console.log("MongoDB Connection Error:", err);
+    storage: String
 
 });
 
-
-
-app.get("/", (req, res) => {
-
-    res.send("Graphene Backend Running Successfully");
-
-});
-
-
-
-app.get("/api/health", (req, res) => {
-
-    res.status(200).json({
-
-        status: "success",
-
-        message: "Backend API Working",
-
-        mongodb: "connected"
-
-    });
-
-});
-
-
-
-app.get("/api/devices", async (req, res) => {
-
-    try {
-
-        const devices = [
-
-            {
-                id: 1,
-                deviceName: "Graphene Laptop",
-                architecture: "x64",
-                status: "active"
-            },
-
-            {
-                id: 2,
-                deviceName: "Graphene Desktop",
-                architecture: "ARM64",
-                status: "active"
-            }
-
-        ];
-
-        res.status(200).json(devices);
-
-    } catch (error) {
-
-        res.status(500).json({
-
-            error: "Failed to fetch devices"
-
-        });
-
-    }
-
-});
-
-
-
-app.post("/api/devices", async (req, res) => {
-
-    try {
-
-        const newDevice = req.body;
-
-        res.status(201).json({
-
-            message: "Device Added Successfully",
-
-            device: newDevice
-
-        });
-
-    } catch (error) {
-
-        res.status(500).json({
-
-            error: "Failed to add device"
-
-        });
-
-    }
-
-});
-
-
-
-app.use((req, res) => {
-
-    res.status(404).json({
-
-        error: "Route Not Found"
-
-    });
-
-});
-
-
-
-app.listen(PORT, () => {
-
-    console.log(`Server running on port ${PORT}`);
-
-});
+module.exports = mongoose.model("Device", DeviceSchema);
