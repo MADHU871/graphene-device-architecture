@@ -9,13 +9,32 @@ app.use(cors());
 app.use(express.json());
 
 mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("MongoDB Connected"))
-.catch(err => console.log(err));
-
-app.use("/api/devices", require("./routes/deviceRoutes"));
+.then(() => {
+    console.log("MongoDB Connected Successfully");
+})
+.catch((err) => {
+    console.log("MongoDB Connection Error:", err);
+});
 
 app.get("/", (req, res) => {
-    res.send("Graphene Device Architecture API Running");
+    res.send("Graphene Device Architecture Backend Running");
+});
+
+app.get("/api/devices", (req, res) => {
+    res.json([
+        {
+            deviceName: "Graphene Laptop",
+            architecture: "ARM64",
+            processor: "Apple M1",
+            memory: "16GB"
+        },
+        {
+            deviceName: "Graphene Server",
+            architecture: "x86_64",
+            processor: "Intel Xeon",
+            memory: "64GB"
+        }
+    ]);
 });
 
 const PORT = process.env.PORT || 5000;
