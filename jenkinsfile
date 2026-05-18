@@ -1,11 +1,12 @@
 pipeline {
+
     agent any
 
     environment {
 
         DOCKER_PATH = "/usr/local/bin/docker"
 
-        DOCKER_IMAGE = "madhu871/graphene-device-architecture"
+        DOCKER_IMAGE = "mad0008271/graphene-device-architecture:latest"
 
         CONTAINER_NAME = "graphene-app"
 
@@ -15,6 +16,7 @@ pipeline {
     stages {
 
         stage('Check Workspace') {
+
             steps {
 
                 sh 'pwd'
@@ -24,6 +26,7 @@ pipeline {
         }
 
         stage('Check Docker Version') {
+
             steps {
 
                 sh '$DOCKER_PATH --version'
@@ -33,29 +36,34 @@ pipeline {
         }
 
         stage('Docker Cleanup') {
+
             steps {
 
                 sh '''
-                $DOCKER_PATH system prune -af || true
+                $DOCKER_PATH image prune -af || true
                 '''
             }
         }
 
         stage('Docker Build Image') {
+
             steps {
 
                 sh '''
+
                 export DOCKER_BUILDKIT=0
 
                 $DOCKER_PATH build \
                 --no-cache \
                 -t $DOCKER_IMAGE \
                 ./backend
+
                 '''
             }
         }
 
         stage('Check Docker Images') {
+
             steps {
 
                 sh '''
@@ -65,6 +73,7 @@ pipeline {
         }
 
         stage('Docker Login') {
+
             steps {
 
                 withCredentials([
@@ -76,16 +85,25 @@ pipeline {
                 ]) {
 
                     sh '''
+
+                    mkdir -p ~/.docker
+
+                    echo '{
+                      "auths": {}
+                    }' > ~/.docker/config.json
+
                     echo $DOCKER_PASS | \
                     $DOCKER_PATH login \
                     -u $DOCKER_USER \
                     --password-stdin
+
                     '''
                 }
             }
         }
 
         stage('Docker Push') {
+
             steps {
 
                 sh '''
@@ -94,16 +112,8 @@ pipeline {
             }
         }
 
-        stage('Docker Pull') {
-            steps {
-
-                sh '''
-                $DOCKER_PATH pull $DOCKER_IMAGE
-                '''
-            }
-        }
-
         stage('Stop Old Container') {
+
             steps {
 
                 sh '''
@@ -113,18 +123,23 @@ pipeline {
         }
 
         stage('Run Docker Container') {
+
             steps {
 
                 sh '''
+
                 $DOCKER_PATH run -d \
+                --restart unless-stopped \
                 --name $CONTAINER_NAME \
                 -p 5000:5000 \
                 $DOCKER_IMAGE
+
                 '''
             }
         }
 
         stage('Docker Container Status') {
+
             steps {
 
                 sh '''
@@ -134,6 +149,7 @@ pipeline {
         }
 
         stage('Docker Logs') {
+
             steps {
 
                 sh '''
@@ -143,19 +159,23 @@ pipeline {
         }
 
         stage('Docker Copy Backup') {
+
             steps {
 
                 sh '''
+
                 mkdir -p backup
 
                 $DOCKER_PATH cp \
                 $CONTAINER_NAME:/app \
                 backup/
+
                 '''
             }
         }
 
         stage('Docker Error Finder') {
+
             steps {
 
                 sh '''
@@ -165,6 +185,7 @@ pipeline {
         }
 
         stage('Docker Compose Validation') {
+
             steps {
 
                 sh '''
@@ -174,6 +195,7 @@ pipeline {
         }
 
         stage('Render Deployment Ready') {
+
             steps {
 
                 echo 'Application is ready for Render deployment'
