@@ -2,37 +2,62 @@ pipeline {
     agent any
 
     environment {
+
         DOCKER_PATH = "/usr/local/bin/docker"
+
         DOCKER_IMAGE = "madhu871/graphene-device-architecture"
+
         CONTAINER_NAME = "graphene-app"
+
+        DOCKER_BUILDKIT = "0"
     }
 
     stages {
 
         stage('Check Workspace') {
             steps {
+
                 sh 'pwd'
+
                 sh 'ls -la'
             }
         }
 
         stage('Check Docker Version') {
             steps {
+
                 sh '$DOCKER_PATH --version'
+
                 sh '$DOCKER_PATH compose version'
+            }
+        }
+
+        stage('Docker Cleanup') {
+            steps {
+
+                sh '''
+                $DOCKER_PATH system prune -af || true
+                '''
             }
         }
 
         stage('Docker Build Image') {
             steps {
+
                 sh '''
-                $DOCKER_PATH build -t $DOCKER_IMAGE ./backend
+                export DOCKER_BUILDKIT=0
+
+                $DOCKER_PATH build \
+                --no-cache \
+                -t $DOCKER_IMAGE \
+                ./backend
                 '''
             }
         }
 
         stage('Check Docker Images') {
             steps {
+
                 sh '''
                 $DOCKER_PATH images
                 '''
@@ -41,14 +66,20 @@ pipeline {
 
         stage('Docker Login') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
 
                     sh '''
-                    echo $DOCKER_PASS | $DOCKER_PATH login -u $DOCKER_USER --password-stdin
+                    echo $DOCKER_PASS | \
+                    $DOCKER_PATH login \
+                    -u $DOCKER_USER \
+                    --password-stdin
                     '''
                 }
             }
@@ -56,6 +87,7 @@ pipeline {
 
         stage('Docker Push') {
             steps {
+
                 sh '''
                 $DOCKER_PATH push $DOCKER_IMAGE
                 '''
@@ -64,6 +96,7 @@ pipeline {
 
         stage('Docker Pull') {
             steps {
+
                 sh '''
                 $DOCKER_PATH pull $DOCKER_IMAGE
                 '''
@@ -72,6 +105,7 @@ pipeline {
 
         stage('Stop Old Container') {
             steps {
+
                 sh '''
                 $DOCKER_PATH rm -f $CONTAINER_NAME || true
                 '''
@@ -80,6 +114,7 @@ pipeline {
 
         stage('Run Docker Container') {
             steps {
+
                 sh '''
                 $DOCKER_PATH run -d \
                 --name $CONTAINER_NAME \
@@ -91,6 +126,7 @@ pipeline {
 
         stage('Docker Container Status') {
             steps {
+
                 sh '''
                 $DOCKER_PATH ps -a
                 '''
@@ -99,6 +135,7 @@ pipeline {
 
         stage('Docker Logs') {
             steps {
+
                 sh '''
                 $DOCKER_PATH logs $CONTAINER_NAME
                 '''
@@ -107,6 +144,7 @@ pipeline {
 
         stage('Docker Copy Backup') {
             steps {
+
                 sh '''
                 mkdir -p backup
 
@@ -119,6 +157,7 @@ pipeline {
 
         stage('Docker Error Finder') {
             steps {
+
                 sh '''
                 $DOCKER_PATH inspect $CONTAINER_NAME
                 '''
@@ -127,6 +166,7 @@ pipeline {
 
         stage('Docker Compose Validation') {
             steps {
+
                 sh '''
                 $DOCKER_PATH compose config
                 '''
@@ -135,7 +175,8 @@ pipeline {
 
         stage('Render Deployment Ready') {
             steps {
-                echo 'Application is ready for deployment on Render'
+
+                echo 'Application is ready for Render deployment'
             }
         }
     }
@@ -143,14 +184,17 @@ pipeline {
     post {
 
         success {
+
             echo 'CI/CD Pipeline Completed Successfully'
         }
 
         failure {
+
             echo 'Pipeline Failed'
         }
 
         always {
+
             sh '''
             $DOCKER_PATH ps -a || true
             '''
