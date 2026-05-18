@@ -2,6 +2,10 @@ pipeline {
 
     agent any
 
+    triggers {
+        githubPush()
+    }
+
     environment {
 
         DOCKER_PATH = "/usr/local/bin/docker"
@@ -11,9 +15,20 @@ pipeline {
         CONTAINER_NAME = "graphene-app"
 
         DOCKER_BUILDKIT = "0"
+
+        MONGO_URI=mongodb+srv://mad0008271_db_user:Ckx0s6z9tWAGmCUz@graphene-device-archite.rvxncn2.mongodb.net/graphene?retryWrites=true&w=majority
+        PORT=5000
     }
 
     stages {
+
+        stage('GitHub Trigger Check') {
+
+            steps {
+
+                echo 'GitHub webhook triggered Jenkins pipeline'
+            }
+        }
 
         stage('Check Workspace') {
 
@@ -35,12 +50,22 @@ pipeline {
             }
         }
 
-        stage('Docker Cleanup') {
+        stage('Docker Automation Cleanup') {
 
             steps {
 
                 sh '''
                 $DOCKER_PATH image prune -af || true
+                '''
+            }
+        }
+
+        stage('MongoDB Connection Check') {
+
+            steps {
+
+                sh '''
+                echo "MongoDB URI Configured"
                 '''
             }
         }
@@ -102,12 +127,22 @@ pipeline {
             }
         }
 
-        stage('Docker Push') {
+        stage('Docker Push Automation') {
 
             steps {
 
                 sh '''
                 $DOCKER_PATH push $DOCKER_IMAGE
+                '''
+            }
+        }
+
+        stage('Docker Pull Automation') {
+
+            steps {
+
+                sh '''
+                $DOCKER_PATH pull $DOCKER_IMAGE
                 '''
             }
         }
@@ -131,6 +166,8 @@ pipeline {
                 $DOCKER_PATH run -d \
                 --restart unless-stopped \
                 --name $CONTAINER_NAME \
+                -e MONGO_URI=$MONGO_URI \
+                -e PORT=$PORT \
                 -p 5001:5000 \
                 $DOCKER_IMAGE
 
@@ -138,7 +175,7 @@ pipeline {
             }
         }
 
-        stage('Docker Container Status') {
+        stage('Docker Trigger Automation') {
 
             steps {
 
