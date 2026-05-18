@@ -2,35 +2,40 @@ pipeline {
     agent any
 
     environment {
+        DOCKER_PATH = "/opt/homebrew/bin/docker"
         DOCKER_IMAGE = "madhu871/graphene-device-architecture"
         CONTAINER_NAME = "graphene-app"
     }
 
     stages {
 
-        stage('Check Files') {
+        stage('Check Workspace') {
             steps {
                 sh 'pwd'
                 sh 'ls -la'
             }
         }
 
-        stage('Docker Version') {
+        stage('Check Docker Version') {
             steps {
-                sh 'docker --version'
-                sh 'docker compose version'
+                sh '$DOCKER_PATH --version'
+                sh '$DOCKER_PATH compose version'
             }
         }
 
-        stage('Docker Build') {
+        stage('Docker Build Image') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE ./backend'
+                sh '''
+                $DOCKER_PATH build -t $DOCKER_IMAGE ./backend
+                '''
             }
         }
 
-        stage('Docker Images') {
+        stage('Check Docker Images') {
             steps {
-                sh 'docker images'
+                sh '''
+                $DOCKER_PATH images
+                '''
             }
         }
 
@@ -41,29 +46,42 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+
+                    sh '''
+                    echo $DOCKER_PASS | $DOCKER_PATH login -u $DOCKER_USER --password-stdin
+                    '''
                 }
             }
         }
 
         stage('Docker Push') {
             steps {
-                sh 'docker push $DOCKER_IMAGE'
+                sh '''
+                $DOCKER_PATH push $DOCKER_IMAGE
+                '''
             }
         }
 
         stage('Docker Pull') {
             steps {
-                sh 'docker pull $DOCKER_IMAGE'
+                sh '''
+                $DOCKER_PATH pull $DOCKER_IMAGE
+                '''
             }
         }
 
-        stage('Run Container') {
+        stage('Stop Old Container') {
             steps {
                 sh '''
-                docker rm -f $CONTAINER_NAME || true
+                $DOCKER_PATH rm -f $CONTAINER_NAME || true
+                '''
+            }
+        }
 
-                docker run -d \
+        stage('Run Docker Container') {
+            steps {
+                sh '''
+                $DOCKER_PATH run -d \
                 --name $CONTAINER_NAME \
                 -p 5000:5000 \
                 $DOCKER_IMAGE
@@ -71,31 +89,53 @@ pipeline {
             }
         }
 
-        stage('Docker Logs') {
-            steps {
-                sh 'docker logs $CONTAINER_NAME'
-            }
-        }
-
-        stage('Docker Copy') {
+        stage('Docker Container Status') {
             steps {
                 sh '''
-                mkdir -p backup
-                docker cp $CONTAINER_NAME:/app backup/
+                $DOCKER_PATH ps -a
                 '''
             }
         }
 
-        stage('Docker Error Check') {
+        stage('Docker Logs') {
             steps {
-                sh 'docker ps -a'
-                sh 'docker inspect $CONTAINER_NAME'
+                sh '''
+                $DOCKER_PATH logs $CONTAINER_NAME
+                '''
             }
         }
 
-        stage('Render Deploy Ready') {
+        stage('Docker Copy Backup') {
             steps {
-                echo 'Application ready for Render deployment'
+                sh '''
+                mkdir -p backup
+
+                $DOCKER_PATH cp \
+                $CONTAINER_NAME:/app \
+                backup/
+                '''
+            }
+        }
+
+        stage('Docker Error Finder') {
+            steps {
+                sh '''
+                $DOCKER_PATH inspect $CONTAINER_NAME
+                '''
+            }
+        }
+
+        stage('Docker Compose Validation') {
+            steps {
+                sh '''
+                $DOCKER_PATH compose config
+                '''
+            }
+        }
+
+        stage('Render Deployment Ready') {
+            steps {
+                echo 'Application is ready for deployment on Render'
             }
         }
     }
@@ -103,11 +143,17 @@ pipeline {
     post {
 
         success {
-            echo 'Pipeline completed successfully'
+            echo 'CI/CD Pipeline Completed Successfully'
         }
 
         failure {
-            echo 'Pipeline failed'
+            echo 'Pipeline Failed'
+        }
+
+        always {
+            sh '''
+            $DOCKER_PATH ps -a || true
+            '''
         }
     }
 }
