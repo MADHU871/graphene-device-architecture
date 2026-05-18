@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_PATH = "/opt/homebrew/bin/docker"
+        DOCKER_PATH = "/usr/local/bin/docker"
         DOCKER_IMAGE = "madhu871/graphene-device-architecture"
         CONTAINER_NAME = "graphene-app"
     }
