@@ -1,15 +1,10 @@
-services:
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
+steps:
+  - name: Checkout
+    uses: actions/checkout@v4
 
-  backend:
-    build: ./backend
-    ports:
-      - "5001:5000"
+  - name: Setup Node
+    uses: actions/setup-node@v4
+    with:
+      node-version: 18
 
-  mongo:
-    image: mongo
-    ports:
-      - "27017:27017"
+  - run: npm install
