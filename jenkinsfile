@@ -2,34 +2,24 @@ pipeline {
 
     agent any
 
-    triggers {
-        githubPush()
-    }
-
     environment {
-
-        DOCKER_PATH = "/usr/local/bin/docker"
 
         DOCKER_IMAGE = "mad0008271/graphene-device-architecture:latest"
 
         CONTAINER_NAME = "graphene-app"
 
+        DOCKER_PATH = "/usr/local/bin/docker"
+
         DOCKER_BUILDKIT = "0"
 
-        MONGO_URI = "mongodb+srv://mad0008271_db_user:Ckx0s6z9tWAGmCUz@graphene-device-archite.rvxncn2.mongodb.net/graphene?retryWrites=true&w=majority"
+        AZURE_WEBAPP_NAME = "graphene-device-app"
 
-        PORT = "5001"
+        AZURE_RESOURCE_GROUP = "graphene-group"
+
+        MONGO_URI = "mongodb+srv://mad0008271_db_user:Ckx0s6z9tWAGmCUz@graphene-device-archite.rvxncn2.mongodb.net/graphene?retryWrites=true&w=majority"
     }
 
     stages {
-
-        stage('GitHub Trigger Check') {
-
-            steps {
-
-                echo 'GitHub webhook triggered Jenkins pipeline'
-            }
-        }
 
         stage('Check Workspace') {
 
@@ -47,43 +37,33 @@ pipeline {
 
                 sh '$DOCKER_PATH --version'
 
-                sh '$DOCKER_PATH compose version'
+                sh '$DOCKER_PATH compose version || true'
             }
         }
 
-        stage('Docker Automation Cleanup') {
+        stage('Docker Cleanup') {
 
             steps {
 
                 sh '''
-                $DOCKER_PATH image prune -af || true
+                $DOCKER_PATH rm -f $CONTAINER_NAME || true
+
+                $DOCKER_PATH system prune -af || true
                 '''
             }
         }
 
-        stage('MongoDB Connection Check') {
+        stage('Docker Build') {
 
             steps {
 
                 sh '''
-                echo "MongoDB URI Configured Successfully"
-                '''
-            }
-        }
-
-        stage('Docker Build Image') {
-
-            steps {
-
-                sh '''
-
                 export DOCKER_BUILDKIT=0
 
                 $DOCKER_PATH build \
                 --no-cache \
                 -t $DOCKER_IMAGE \
                 ./backend
-
                 '''
             }
         }
@@ -111,24 +91,16 @@ pipeline {
                 ]) {
 
                     sh '''
-
-                    mkdir -p ~/.docker
-
-                    echo '{
-                      "auths": {}
-                    }' > ~/.docker/config.json
-
                     echo $DOCKER_PASS | \
                     $DOCKER_PATH login \
                     -u $DOCKER_USER \
                     --password-stdin
-
                     '''
                 }
             }
         }
 
-        stage('Docker Push Automation') {
+        stage('Docker Push') {
 
             steps {
 
@@ -138,7 +110,7 @@ pipeline {
             }
         }
 
-        stage('Docker Pull Automation') {
+        stage('Docker Pull') {
 
             steps {
 
@@ -148,35 +120,24 @@ pipeline {
             }
         }
 
-        stage('Stop Old Container') {
-
-            steps {
-
-                sh '''
-                $DOCKER_PATH rm -f $CONTAINER_NAME || true
-                '''
-            }
-        }
-
         stage('Run Docker Container') {
 
             steps {
 
                 sh '''
+                $DOCKER_PATH rm -f $CONTAINER_NAME || true
 
                 $DOCKER_PATH run -d \
                 --restart unless-stopped \
                 --name $CONTAINER_NAME \
-                -e MONGO_URI="$MONGO_URI" \
-                -e PORT="$PORT" \
                 -p 5001:5000 \
+                -e MONGO_URI="$MONGO_URI" \
                 $DOCKER_IMAGE
-
                 '''
             }
         }
 
-        stage('Docker Trigger Automation') {
+        stage('Docker Container Status') {
 
             steps {
 
@@ -191,7 +152,7 @@ pipeline {
             steps {
 
                 sh '''
-                $DOCKER_PATH logs $CONTAINER_NAME
+                $DOCKER_PATH logs $CONTAINER_NAME || true
                 '''
             }
         }
@@ -201,13 +162,11 @@ pipeline {
             steps {
 
                 sh '''
-
-                mkdir -p backup
+                mkdir -p backup || true
 
                 $DOCKER_PATH cp \
                 $CONTAINER_NAME:/app \
-                backup/
-
+                backup/ || true
                 '''
             }
         }
@@ -217,7 +176,7 @@ pipeline {
             steps {
 
                 sh '''
-                $DOCKER_PATH inspect $CONTAINER_NAME
+                $DOCKER_PATH inspect $CONTAINER_NAME || true
                 '''
             }
         }
@@ -227,7 +186,79 @@ pipeline {
             steps {
 
                 sh '''
-                $DOCKER_PATH compose config
+                $DOCKER_PATH compose config || true
+                '''
+            }
+        }
+
+        stage('Azure Login') {
+
+            steps {
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'azure-creds',
+                        usernameVariable: 'AZURE_USER',
+                        passwordVariable: 'AZURE_PASS'
+                    )
+                ]) {
+
+                    sh '''
+                    az login \
+                    -u $AZURE_USER \
+                    -p $AZURE_PASS
+                    '''
+                }
+            }
+        }
+
+        stage('Azure Configure Container') {
+
+            steps {
+
+                sh '''
+                az webapp config container set \
+                --name $AZURE_WEBAPP_NAME \
+                --resource-group $AZURE_RESOURCE_GROUP \
+                --docker-custom-image-name $DOCKER_IMAGE
+                '''
+            }
+        }
+
+        stage('Azure MongoDB Settings') {
+
+            steps {
+
+                sh '''
+                az webapp config appsettings set \
+                --resource-group $AZURE_RESOURCE_GROUP \
+                --name $AZURE_WEBAPP_NAME \
+                --settings \
+                MONGO_URI="$MONGO_URI"
+                '''
+            }
+        }
+
+        stage('Azure Restart WebApp') {
+
+            steps {
+
+                sh '''
+                az webapp restart \
+                --name $AZURE_WEBAPP_NAME \
+                --resource-group $AZURE_RESOURCE_GROUP
+                '''
+            }
+        }
+
+        stage('Azure Deployment Status') {
+
+            steps {
+
+                sh '''
+                az webapp show \
+                --name $AZURE_WEBAPP_NAME \
+                --resource-group $AZURE_RESOURCE_GROUP
                 '''
             }
         }
@@ -236,7 +267,7 @@ pipeline {
 
             steps {
 
-                echo 'Application is ready for Render deployment'
+                echo 'Application ready for Render deployment'
             }
         }
     }
