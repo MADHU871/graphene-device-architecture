@@ -15,8 +15,6 @@ pipeline {
         AZURE_WEBAPP_NAME = "graphene-device-app"
 
         AZURE_RESOURCE_GROUP = "graphene-group"
-
-        MONGO_URI = "mongodb+srv://mad0008271_db_user:Ckx0s6z9tWAGmCUz@graphene-device-archite.rvxncn2.mongodb.net/graphene?retryWrites=true&w=majority"
     }
 
     stages {
@@ -131,7 +129,6 @@ pipeline {
                 --restart unless-stopped \
                 --name $CONTAINER_NAME \
                 -p 5001:5000 \
-                -e MONGO_URI="$MONGO_URI" \
                 $DOCKER_IMAGE
                 '''
             }
@@ -221,20 +218,6 @@ pipeline {
                 --name $AZURE_WEBAPP_NAME \
                 --resource-group $AZURE_RESOURCE_GROUP \
                 --docker-custom-image-name $DOCKER_IMAGE
-                '''
-            }
-        }
-
-        stage('Azure MongoDB Settings') {
-
-            steps {
-
-                sh '''
-                az webapp config appsettings set \
-                --resource-group $AZURE_RESOURCE_GROUP \
-                --name $AZURE_WEBAPP_NAME \
-                --settings \
-                MONGO_URI="$MONGO_URI"
                 '''
             }
         }
