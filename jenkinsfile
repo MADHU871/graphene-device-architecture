@@ -10,8 +10,6 @@ pipeline {
 
         DOCKER_PATH = "/usr/local/bin/docker"
 
-        DOCKER_BUILDKIT = "0"
-
         AZURE_WEBAPP_NAME = "graphene-device-app"
 
         AZURE_RESOURCE_GROUP = "graphene-group"
@@ -58,10 +56,7 @@ pipeline {
             steps {
 
                 sh '''
-                export DOCKER_BUILDKIT=0
-
-                $DOCKER_PATH build \
-                --no-cache \
+                docker build \
                 -t $DOCKER_IMAGE \
                 ./backend
                 '''
@@ -92,7 +87,7 @@ pipeline {
 
                     sh '''
                     echo $DOCKER_PASS | \
-                    $DOCKER_PATH login \
+                    docker login \
                     -u $DOCKER_USER \
                     --password-stdin
                     '''
@@ -105,7 +100,7 @@ pipeline {
             steps {
 
                 sh '''
-                $DOCKER_PATH push $DOCKER_IMAGE
+                docker push $DOCKER_IMAGE
                 '''
             }
         }
@@ -115,7 +110,7 @@ pipeline {
             steps {
 
                 sh '''
-                $DOCKER_PATH pull $DOCKER_IMAGE
+                docker pull $DOCKER_IMAGE
                 '''
             }
         }
@@ -125,9 +120,9 @@ pipeline {
             steps {
 
                 sh '''
-                $DOCKER_PATH rm -f $CONTAINER_NAME || true
+                docker rm -f $CONTAINER_NAME || true
 
-                $DOCKER_PATH run -d \
+                docker run -d \
                 --restart unless-stopped \
                 --name $CONTAINER_NAME \
                 -p 5002:5000 \
@@ -141,7 +136,7 @@ pipeline {
             steps {
 
                 sh '''
-                $DOCKER_PATH ps -a
+                docker ps -a
                 '''
             }
         }
@@ -151,7 +146,7 @@ pipeline {
             steps {
 
                 sh '''
-                $DOCKER_PATH logs $CONTAINER_NAME || true
+                docker logs $CONTAINER_NAME || true
                 '''
             }
         }
@@ -163,7 +158,7 @@ pipeline {
                 sh '''
                 mkdir -p backup || true
 
-                $DOCKER_PATH cp \
+                docker cp \
                 $CONTAINER_NAME:/app \
                 backup/ || true
                 '''
@@ -175,7 +170,7 @@ pipeline {
             steps {
 
                 sh '''
-                $DOCKER_PATH inspect $CONTAINER_NAME || true
+                docker inspect $CONTAINER_NAME || true
                 '''
             }
         }
@@ -185,7 +180,7 @@ pipeline {
             steps {
 
                 sh '''
-                $DOCKER_PATH compose config || true
+                docker compose config || true
                 '''
             }
         }
@@ -268,7 +263,7 @@ pipeline {
         always {
 
             sh '''
-            $DOCKER_PATH ps -a || true
+            docker ps -a || true
             '''
         }
     }
