@@ -46,6 +46,8 @@ pipeline {
                 sh '''
                 $DOCKER_PATH rm -f $CONTAINER_NAME || true
 
+                $DOCKER_PATH rm -f graphene-test || true
+
                 $DOCKER_PATH system prune -af || true
                 '''
             }
@@ -247,14 +249,6 @@ pipeline {
                 sh '''
                 curl -I https://graphene-device-app.azurewebsites.net || true
                 '''
-            }
-        }
-
-        stage('Render Deployment Ready') {
-
-            steps {
-
-                echo 'Application ready for Render deployment'
             }
         }
     }
