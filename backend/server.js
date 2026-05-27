@@ -20,41 +20,18 @@ app.get("/", (req, res) => {
 
 
 
-app.get("/api/health", (req, res) => {
-
-    res.status(200).json({
-
-        status: "success",
-
-        message: "Backend API Working"
-
-    });
-
-});
-
-
-
 app.get("/api/devices", (req, res) => {
 
-    const devices = [
+    res.json([
 
         {
             id: 1,
             deviceName: "Graphene Laptop",
             architecture: "x64",
             status: "active"
-        },
-
-        {
-            id: 2,
-            deviceName: "Graphene Desktop",
-            architecture: "ARM64",
-            status: "active"
         }
 
-    ];
-
-    res.status(200).json(devices);
+    ]);
 
 });
 
