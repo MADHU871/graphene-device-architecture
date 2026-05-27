@@ -188,27 +188,6 @@ pipeline {
             }
         }
 
-        stage('Azure Login') {
-
-            steps {
-
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'azure-creds',
-                        usernameVariable: 'AZURE_USER',
-                        passwordVariable: 'AZURE_PASS'
-                    )
-                ]) {
-
-                    sh '''
-                    az login \
-                    -u $AZURE_USER \
-                    -p $AZURE_PASS
-                    '''
-                }
-            }
-        }
-
         stage('Azure Configure Container') {
 
             steps {
